@@ -1,0 +1,290 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beach Flags Starter</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f0f8ff;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #123047;
+    }
+
+    .container {
+      width: min(92%, 560px);
+      text-align: center;
+      padding: 30px 20px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 6vw, 42px);
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      color: #557080;
+      margin-bottom: 40px;
+      font-size: 16px;
+    }
+
+    #startButton {
+      width: 100%;
+      min-height: 180px;
+      border: none;
+      border-radius: 24px;
+      background: #0878e8;
+      color: white;
+      font-size: clamp(38px, 9vw, 60px);
+      font-weight: 900;
+      letter-spacing: 2px;
+      cursor: pointer;
+      box-shadow: 0 9px 0 #0756a5;
+      transition: transform 0.1s, background 0.2s;
+    }
+
+    #startButton:active:not(:disabled) {
+      transform: translateY(6px);
+      box-shadow: 0 3px 0 #0756a5;
+    }
+
+    #startButton:disabled {
+      background: #789bbd;
+      box-shadow: 0 9px 0 #587b9c;
+      cursor: not-allowed;
+    }
+
+    #status {
+      min-height: 90px;
+      margin-top: 35px;
+      font-size: clamp(20px, 5vw, 28px);
+      font-weight: bold;
+      line-height: 1.5;
+    }
+
+    #resetButton {
+      margin-top: 10px;
+      padding: 14px 28px;
+      font-size: 18px;
+      font-weight: bold;
+      border: 2px solid #123047;
+      border-radius: 12px;
+      background: white;
+      color: #123047;
+      cursor: pointer;
+    }
+
+    #resetButton:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .note {
+      margin-top: 30px;
+      color: #557080;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>BEACH FLAGS</h1>
+    <p class="subtitle">START SIGNAL SYSTEM</p>
+
+    <button id="startButton">START</button>
+
+    <div id="status" aria-live="polite">
+      Ready to start
+    </div>
+
+    <button id="resetButton" disabled>RESET</button>
+
+    <p class="note">
+      Keep the sound on. Wait for the whistle!
+    </p>
+  </main>
+
+  <script>
+    const startButton = document.getElementById("startButton");
+    const resetButton = document.getElementById("resetButton");
+    const status = document.getElementById("status");
+
+    let timers = [];
+    let audioContext = null;
+    let runId = 0;
+    let running = false;
+
+    function later(callback, delay) {
+      const timer = setTimeout(callback, delay);
+      timers.push(timer);
+      return timer;
+    }
+
+    function speak(text, callback, id) {
+      if (id !== runId) return;
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US";
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      utterance.onend = () => {
+        if (id === runId) callback();
+      };
+
+      utterance.onerror = (event) => {
+        if (id !== runId) return;
+
+        if (event.error === "canceled" ||
+            event.error === "interrupted") return;
+
+        status.textContent = "Speech error. Please reset and try again.";
+        running = false;
+        startButton.disabled = false;
+        resetButton.disabled = false;
+      };
+
+      speechSynthesis.speak(utterance);
+    }
+
+    function playWhistle() {
+      const ctx = audioContext;
+
+      if (!ctx) return;
+
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+
+      const now = ctx.currentTime;
+      const duration = 1.2;
+
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const vibrato = ctx.createOscillator();
+      const vibratoGain = ctx.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(2400, now);
+      oscillator.frequency.exponentialRampToValueAtTime(
+        1800, now + duration
+      );
+
+      vibrato.frequency.value = 25;
+      vibratoGain.gain.value = 65;
+      vibrato.connect(vibratoGain);
+      vibratoGain.connect(oscillator.frequency);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.8, now + 0.04);
+      gain.gain.setValueAtTime(0.8, now + 0.75);
+      gain.gain.exponentialRampToValueAtTime(
+        0.001, now + duration
+      );
+
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+
+      oscillator.start(now);
+      vibrato.start(now);
+
+      oscillator.stop(now + duration);
+      vibrato.stop(now + duration);
+
+      oscillator.onended = () => {
+        gain.disconnect();
+        vibratoGain.disconnect();
+      };
+    }
+
+    function finish(id) {
+      if (id !== runId) return;
+
+      running = false;
+      startButton.disabled = false;
+      resetButton.disabled = false;
+      status.textContent = "GO! Good luck!";
+    }
+
+    function startSequence() {
+      if (running) return;
+
+      running = true;
+      const id = ++runId;
+
+      startButton.disabled = true;
+      resetButton.disabled = true;
+      status.textContent = "Get ready...";
+
+      // Initialize audio after the user's button press.
+      if (!audioContext) {
+        audioContext = new (
+          window.AudioContext || window.webkitAudioContext
+        )();
+      }
+
+      audioContext.resume();
+
+      // Wait 10 seconds before the spoken commands.
+      later(() => {
+        if (id !== runId) return;
+
+        status.textContent = "COMPETITORS READY";
+
+        speak("Competitors ready", () => {
+          if (id !== runId) return;
+
+          status.textContent = "HEADS DOWN";
+
+          speak("Heads down", () => {
+            if (id !== runId) return;
+
+            status.textContent = "Wait for the whistle...";
+
+            // Random delay between 1.0 and 2.5 seconds.
+            const delay = 1000 + Math.random() * 1500;
+
+            later(() => {
+              if (id !== runId) return;
+
+              playWhistle();
+              finish(id);
+            }, delay);
+          }, id);
+        }, id);
+      }, 10000);
+    }
+
+    function resetSequence() {
+      runId++;
+
+      timers.forEach(clearTimeout);
+      timers = [];
+
+      speechSynthesis.cancel();
+
+      running = false;
+      startButton.disabled = false;
+      resetButton.disabled = true;
+      status.textContent = "Ready to start";
+    }
+
+    startButton.addEventListener("click", startSequence);
+    resetButton.addEventListener("click", resetSequence);
+  </script>
+</body>
+</html>
