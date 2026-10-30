@@ -68,8 +68,8 @@
 
     let audioCtx = null;
 
-    // Web Audio APIの初期化（スマホの音声再生制限を解除する）
-    function initAudio() {
+    // ボタン押下時に必ず呼ぶ：スマホのWeb Audio APIを強力にアンロック
+    function unlockAudio() {
       if (!audioCtx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioCtx = new AudioContext();
@@ -77,82 +77,101 @@
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
+
+      // ★重要：タップした瞬間に「無音」の音声を1ミリ秒だけ実際に再生してブラウザの制限を完全に解除
+      const buffer = audioCtx.createBuffer(1, 1, 22050);
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      source.start(0);
     }
 
-    // Web Audio APIでホイッスル音（ピー音）を生成・再生
+    // ホイッスル音再生
     function playWhistle() {
-      initAudio();
-      
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      const now = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
       osc.type = 'sine';
-      // ホイッスルの周波数（約2500Hz〜3000Hz）
-      osc.frequency.setValueAtTime(2800, audioCtx.currentTime);
+      // ピーッと通る高音（2400Hz）
+      osc.frequency.setValueAtTime(2400, now);
 
-      // 音量の調整（急激に小さくして歯切れよく）
-      gain.gain.setValueAtTime(1, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+      // 音量の減衰設定（スマホスピーカーで割れないよう安全な音量設定）
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.setValueAtTime(0.5, now + 0.6);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.8);
 
       osc.connect(gain);
       gain.connect(audioCtx.destination);
 
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.8);
+      osc.start(now);
+      osc.stop(now + 0.8);
     }
 
     // 音声読み上げ関数（英語）
     function speak(text) {
       return new Promise((resolve) => {
+        // 音声認識/再生のバグを防ぐため一旦キャンセル
+        window.speechSynthesis.cancel();
+
         const uttr = new SpeechSynthesisUtterance(text);
         uttr.lang = 'en-US';
         uttr.rate = 1.0;
 
-        uttr.onend = () => {
-          resolve();
+        let resolved = false;
+        const done = () => {
+          if (!resolved) {
+            resolved = true;
+            resolve();
+          }
         };
 
-        uttr.onerror = () => {
-          resolve();
-        };
+        uttr.onend = done;
+        uttr.onerror = done;
+
+        // スマホでonendが呼ばれない場合のセーフティタイマー（3秒で強制進行）
+        setTimeout(done, 3000);
 
         window.speechSynthesis.speak(uttr);
       });
     }
 
-    // 非同期タイマー（指定ミリ秒待機）
     function delay(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // メインのシーケンス
     startBtn.addEventListener('click', async () => {
-      // ユーザー操作起点でオーディオをアンロック
-      initAudio();
-      
-      // スマホのSpeechSynthesis対策：ダミーで空音声を一瞬発声させてアンロック
+      // ユーザーのタップアクション直下にアンロック処理を確実に実行
+      unlockAudio();
+
+      // SpeechSynthesisのアンロック
       window.speechSynthesis.cancel();
-      const dummyUtterance = new SpeechSynthesisUtterance('');
+      const dummyUtterance = new SpeechSynthesisUtterance(' ');
+      dummyUtterance.volume = 0;
       window.speechSynthesis.speak(dummyUtterance);
 
       startBtn.disabled = true;
       statusEl.textContent = "10秒カウントダウン中...";
 
-      // 1. スタートボタン押下後 10秒待機
+      // 1. スタート後 10秒待機
       await delay(10000);
 
       // 2. "Competitors ready"
       statusEl.textContent = "Competitors ready";
       await speak("Competitors ready");
 
-      // 声が終わってから明確に間隔を空ける (0.8秒)
       await delay(800);
 
       // 3. "Heads down"
       statusEl.textContent = "Heads down";
       await speak("Heads down");
 
-      // 4. ランダム時間（1.0秒 〜 2.5秒）の経過
+      // 4. ランダム時間（1.0秒 〜 2.5秒）
       statusEl.textContent = "WAIT...";
       const randomDelay = Math.floor(Math.random() * 1500) + 1000;
       await delay(randomDelay);
@@ -162,7 +181,7 @@
       playWhistle();
 
       // リセット
-      await delay(1000);
+      await delay(1500);
       statusEl.textContent = "READY";
       startBtn.disabled = false;
     });
