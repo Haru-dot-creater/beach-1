@@ -5,6 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BEACH FLAGS - START SIGNAL SYSTEM</title>
   <style>
+    :root {
+      /* デフォルトカラー（ブルー） */
+      --primary-color: #2563eb;
+      --primary-dark: #1e40af;
+      --primary-light: #38bdf8;
+      --primary-glow: rgba(56, 189, 248, 0.4);
+      --btn-shadow: rgba(37, 99, 235, 0.6);
+    }
+
+    /* テーマ別カラー定義 */
+    [data-theme="green"] {
+      --primary-color: #059669;
+      --primary-dark: #065f46;
+      --primary-light: #34d399;
+      --primary-glow: rgba(52, 211, 153, 0.4);
+      --btn-shadow: rgba(5, 150, 105, 0.6);
+    }
+
+    [data-theme="red"] {
+      --primary-color: #dc2626;
+      --primary-dark: #991b1b;
+      --primary-light: #f87171;
+      --primary-glow: rgba(248, 113, 113, 0.4);
+      --btn-shadow: rgba(220, 38, 38, 0.6);
+    }
+
+    [data-theme="purple"] {
+      --primary-color: #7c3aed;
+      --primary-dark: #5b21b6;
+      --primary-light: #c084fc;
+      --primary-glow: rgba(192, 132, 252, 0.4);
+      --btn-shadow: rgba(124, 58, 237, 0.6);
+    }
+
+    [data-theme="orange"] {
+      --primary-color: #ea580c;
+      --primary-dark: #9a3412;
+      --primary-light: #fb923c;
+      --primary-glow: rgba(251, 146, 60, 0.4);
+      --btn-shadow: rgba(234, 88, 12, 0.6);
+    }
+
     * {
       box-sizing: border-box;
     }
@@ -22,11 +64,93 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       text-align: center;
       overflow: hidden;
+      position: relative;
     }
+
+    /* 設定ボタン（右上） */
+    .settings-toggle-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #f8fafc;
+      font-size: 1.5rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background 0.2s;
+      z-index: 10;
+    }
+
+    .settings-toggle-btn:active {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* カラー選択モーダルパネル */
+    .color-panel {
+      position: absolute;
+      top: 65px;
+      right: 15px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    .color-panel.active {
+      display: flex;
+    }
+
+    .color-panel-title {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .color-options {
+      display: flex;
+      gap: 10px;
+    }
+
+    .color-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .color-dot:active {
+      transform: scale(0.9);
+    }
+
+    .color-dot.selected {
+      border-color: #ffffff;
+      transform: scale(1.1);
+    }
+
+    /* 各カラー定義 */
+    .dot-blue { background: #2563eb; }
+    .dot-green { background: #059669; }
+    .dot-red { background: #dc2626; }
+    .dot-purple { background: #7c3aed; }
+    .dot-orange { background: #ea580c; }
 
     /* ヘッダーエリア */
     .header {
-      margin-top: 20px;
+      margin-top: 35px;
     }
 
     .header h1 {
@@ -34,8 +158,9 @@
       font-size: clamp(2rem, 6vw, 3rem);
       font-weight: 900;
       letter-spacing: 0.1em;
-      color: #38bdf8;
-      text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+      color: var(--primary-light);
+      text-shadow: 0 0 20px var(--primary-glow);
+      transition: color 0.3s, text-shadow 0.3s;
     }
 
     .header p {
@@ -61,16 +186,16 @@
       height: 70vw;
       max-height: 340px;
       border-radius: 50%;
-      border: 4px solid #38bdf8;
-      background: radial-gradient(circle, #2563eb 0%, #1d4ed8 70%, #1e40af 100%);
+      border: 4px solid var(--primary-light);
+      background: radial-gradient(circle, var(--primary-light) 0%, var(--primary-color) 70%, var(--primary-dark) 100%);
       color: #ffffff;
       font-size: clamp(2.2rem, 7vw, 3.5rem);
       font-weight: 800;
       letter-spacing: 0.05em;
-      box-shadow: 0 0 35px rgba(37, 99, 235, 0.6), inset 0 4px 8px rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 35px var(--btn-shadow), inset 0 4px 8px rgba(255, 255, 255, 0.3);
       cursor: pointer;
       outline: none;
-      transition: all 0.15s ease-out;
+      transition: transform 0.15s ease-out, background 0.3s, border-color 0.3s, box-shadow 0.3s;
       -webkit-tap-highlight-color: transparent;
       display: flex;
       justify-content: center;
@@ -79,7 +204,7 @@
 
     .start-btn:active {
       transform: scale(0.94);
-      box-shadow: 0 0 15px rgba(37, 99, 235, 0.8), inset 0 2px 4px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 0 15px var(--btn-shadow), inset 0 2px 4px rgba(0, 0, 0, 0.4);
     }
 
     .start-btn:disabled {
@@ -91,7 +216,7 @@
       transform: none;
     }
 
-    /* ステータス・サブテキスト表示エリア */
+    /* ステータス表示エリア */
     .footer-status {
       margin-bottom: 30px;
       height: 90px;
@@ -112,11 +237,11 @@
       margin-top: 8px;
       font-size: clamp(1rem, 3.5vw, 1.4rem);
       font-weight: 600;
-      color: #38bdf8;
+      color: var(--primary-light);
       height: 1.5em;
+      transition: color 0.3s;
     }
 
-    /* GO! 表示時のハイライトカラー */
     .go-text {
       color: #4ade80 !important;
       font-size: clamp(2.5rem, 8vw, 3.5rem) !important;
@@ -125,6 +250,21 @@
   </style>
 </head>
 <body>
+
+  <!-- 設定トグルボタン -->
+  <button id="settingsBtn" class="settings-toggle-btn" aria-label="設定">⚙</button>
+
+  <!-- カラー選択パネル -->
+  <div id="colorPanel" class="color-panel">
+    <div class="color-panel-title">THEME COLOR</div>
+    <div class="color-options">
+      <div class="color-dot dot-blue selected" data-color="blue"></div>
+      <div class="color-dot dot-green" data-color="green"></div>
+      <div class="color-dot dot-red" data-color="red"></div>
+      <div class="color-dot dot-purple" data-color="purple"></div>
+      <div class="color-dot dot-orange" data-color="orange"></div>
+    </div>
+  </div>
 
   <!-- ヘッダー -->
   <div class="header">
@@ -147,10 +287,51 @@
     const startBtn = document.getElementById('startBtn');
     const statusEl = document.getElementById('status');
     const subStatusEl = document.getElementById('subStatus');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const colorPanel = document.getElementById('colorPanel');
+    const colorDots = document.querySelectorAll('.color-dot');
 
     let audioCtx = null;
 
-    // Web Audio APIの強力アンロック
+    // --- カラーテーマ切替機能 ---
+    function setTheme(colorName) {
+      if (colorName === 'blue') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', colorName);
+      }
+      
+      colorDots.forEach(dot => {
+        dot.classList.toggle('selected', dot.dataset.color === colorName);
+      });
+
+      localStorage.setItem('beach_flags_theme', colorName);
+    }
+
+    // 保存したテーマの読み込み
+    const savedTheme = localStorage.getItem('beach_flags_theme') || 'blue';
+    setTheme(savedTheme);
+
+    // 設定メニュー開閉
+    settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      colorPanel.classList.toggle('active');
+    });
+
+    // ドットクリックで色変更
+    colorDots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        setTheme(dot.dataset.color);
+        colorPanel.classList.remove('active');
+      });
+    });
+
+    // 画面外タップでパネルを閉じる
+    document.addEventListener('click', () => {
+      colorPanel.classList.remove('active');
+    });
+
+    // --- オーディオ制御系 ---
     function unlockAudio() {
       if (!audioCtx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -167,7 +348,6 @@
       source.start(0);
     }
 
-    // ホイッスル音の生成（よりクリアで通る高音）
     function playWhistle() {
       if (!audioCtx) return;
       if (audioCtx.state === 'suspended') {
@@ -192,7 +372,6 @@
       osc.stop(now + 0.85);
     }
 
-    // 音声読み上げ（英語）
     function speak(text) {
       return new Promise((resolve) => {
         window.speechSynthesis.cancel();
@@ -221,15 +400,14 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // 指定範囲（min〜max秒）のランダムミリ秒を取得
     function getRandomTime(minSec, maxSec) {
       return Math.floor((Math.random() * (maxSec - minSec) + minSec) * 1000);
     }
 
+    // --- メイン処理 ---
     startBtn.addEventListener('click', async () => {
       unlockAudio();
 
-      // SpeechSynthesisアンロック
       window.speechSynthesis.cancel();
       const dummyUtterance = new SpeechSynthesisUtterance(' ');
       dummyUtterance.volume = 0;
@@ -247,7 +425,7 @@
       statusEl.textContent = "Competitors ready";
       await speak("Competitors ready");
 
-      // 3. ランダム時間（0.6秒 〜 1.0秒）の経過
+      // 3. ランダム時間（0.6秒 〜 1.0秒）
       const readyToHeadsDelay = getRandomTime(0.6, 1.0);
       await delay(readyToHeadsDelay);
 
@@ -255,14 +433,13 @@
       statusEl.textContent = "Heads down";
       await speak("Heads down");
 
-      // 5. ランダム時間（1.0秒 〜 2.5秒）を決定して画面に事前表示
+      // 5. ランダム時間（1.0秒 〜 2.5秒）を事前表示
       const randomDelayMs = getRandomTime(1.0, 2.5);
       const randomDelaySec = (randomDelayMs / 1000).toFixed(2);
       
       statusEl.textContent = "WAIT...";
       subStatusEl.textContent = `Random Delay: ${randomDelaySec}s`;
 
-      // 設定したランダム時間待機
       await delay(randomDelayMs);
 
       // 6. ホイッスル & GO !
