@@ -3,72 +3,154 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ビーチフラッグス スターター</title>
+  <title>BEACH FLAGS - START SIGNAL SYSTEM</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       padding: 20px;
       height: 100vh;
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    /* ヘッダーエリア */
+    .header {
+      margin-top: 20px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      color: #38bdf8;
+      text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+    }
+
+    .header p {
+      margin: 5px 0 0 0;
+      font-size: clamp(0.8rem, 2.5vw, 1.1rem);
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      color: #94a3b8;
+    }
+
+    /* メインボタンエリア */
+    .main-container {
+      display: flex;
       justify-content: center;
       align-items: center;
-      background-color: #f4f4f9;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      box-sizing: border-box;
+      flex-grow: 1;
+      width: 100%;
     }
 
     .start-btn {
-      width: 80vw;
-      max-width: 400px;
-      height: 80vw;
-      max-height: 400px;
+      width: 70vw;
+      max-width: 340px;
+      height: 70vw;
+      max-height: 340px;
       border-radius: 50%;
-      border: none;
-      background: linear-gradient(145deg, #ff4e50, #f9d423);
-      color: white;
-      font-size: clamp(2rem, 8vw, 3.5rem);
-      font-weight: bold;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      border: 4px solid #38bdf8;
+      background: radial-gradient(circle, #2563eb 0%, #1d4ed8 70%, #1e40af 100%);
+      color: #ffffff;
+      font-size: clamp(2.2rem, 7vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      box-shadow: 0 0 35px rgba(37, 99, 235, 0.6), inset 0 4px 8px rgba(255, 255, 255, 0.3);
       cursor: pointer;
       outline: none;
-      transition: transform 0.1s, box-shadow 0.1s;
+      transition: all 0.15s ease-out;
       -webkit-tap-highlight-color: transparent;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     .start-btn:active {
-      transform: scale(0.95);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      transform: scale(0.94);
+      box-shadow: 0 0 15px rgba(37, 99, 235, 0.8), inset 0 2px 4px rgba(0, 0, 0, 0.4);
     }
 
     .start-btn:disabled {
-      background: #ccc;
+      background: #334155;
+      border-color: #475569;
+      color: #64748b;
       box-shadow: none;
       cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ステータス・サブテキスト表示エリア */
+    .footer-status {
+      margin-bottom: 30px;
+      height: 90px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
 
     #status {
-      margin-top: 30px;
-      font-size: 1.5rem;
-      color: #333;
-      height: 2em;
-      text-align: center;
+      font-size: clamp(1.5rem, 5vw, 2.2rem);
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: 0.05em;
+    }
+
+    #subStatus {
+      margin-top: 8px;
+      font-size: clamp(1rem, 3.5vw, 1.4rem);
       font-weight: 600;
+      color: #38bdf8;
+      height: 1.5em;
+    }
+
+    /* GO! 表示時のハイライトカラー */
+    .go-text {
+      color: #4ade80 !important;
+      font-size: clamp(2.5rem, 8vw, 3.5rem) !important;
+      text-shadow: 0 0 25px rgba(74, 222, 128, 0.6);
     }
   </style>
 </head>
 <body>
 
-  <button id="startBtn" class="start-btn">START</button>
-  <div id="status">READY</div>
+  <!-- ヘッダー -->
+  <div class="header">
+    <h1>BEACH FLAGS</h1>
+    <p>START SIGNAL SYSTEM</p>
+  </div>
+
+  <!-- スタートボタン -->
+  <div class="main-container">
+    <button id="startBtn" class="start-btn">START</button>
+  </div>
+
+  <!-- ステータス表示 -->
+  <div class="footer-status">
+    <div id="status">READY</div>
+    <div id="subStatus"></div>
+  </div>
 
   <script>
     const startBtn = document.getElementById('startBtn');
     const statusEl = document.getElementById('status');
+    const subStatusEl = document.getElementById('subStatus');
 
     let audioCtx = null;
 
-    // ボタン押下時に必ず呼ぶ：スマホのWeb Audio APIを強力にアンロック
+    // Web Audio APIの強力アンロック
     function unlockAudio() {
       if (!audioCtx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -78,7 +160,6 @@
         audioCtx.resume();
       }
 
-      // ★重要：タップした瞬間に「無音」の音声を1ミリ秒だけ実際に再生してブラウザの制限を完全に解除
       const buffer = audioCtx.createBuffer(1, 1, 22050);
       const source = audioCtx.createBufferSource();
       source.buffer = buffer;
@@ -86,7 +167,7 @@
       source.start(0);
     }
 
-    // ホイッスル音再生
+    // ホイッスル音の生成（よりクリアで通る高音）
     function playWhistle() {
       if (!audioCtx) return;
       if (audioCtx.state === 'suspended') {
@@ -98,25 +179,22 @@
       const gain = audioCtx.createGain();
 
       osc.type = 'sine';
-      // ピーッと通る高音（2400Hz）
-      osc.frequency.setValueAtTime(2400, now);
+      osc.frequency.setValueAtTime(2600, now);
 
-      // 音量の減衰設定（スマホスピーカーで割れないよう安全な音量設定）
-      gain.gain.setValueAtTime(0.5, now);
-      gain.gain.setValueAtTime(0.5, now + 0.6);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.8);
+      gain.gain.setValueAtTime(0.6, now);
+      gain.gain.setValueAtTime(0.6, now + 0.6);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.85);
 
       osc.connect(gain);
       gain.connect(audioCtx.destination);
 
       osc.start(now);
-      osc.stop(now + 0.8);
+      osc.stop(now + 0.85);
     }
 
-    // 音声読み上げ関数（英語）
+    // 音声読み上げ（英語）
     function speak(text) {
       return new Promise((resolve) => {
-        // 音声認識/再生のバグを防ぐため一旦キャンセル
         window.speechSynthesis.cancel();
 
         const uttr = new SpeechSynthesisUtterance(text);
@@ -133,8 +211,6 @@
 
         uttr.onend = done;
         uttr.onerror = done;
-
-        // スマホでonendが呼ばれない場合のセーフティタイマー（3秒で強制進行）
         setTimeout(done, 3000);
 
         window.speechSynthesis.speak(uttr);
@@ -145,43 +221,59 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    // 指定範囲（min〜max秒）のランダムミリ秒を取得
+    function getRandomTime(minSec, maxSec) {
+      return Math.floor((Math.random() * (maxSec - minSec) + minSec) * 1000);
+    }
+
     startBtn.addEventListener('click', async () => {
-      // ユーザーのタップアクション直下にアンロック処理を確実に実行
       unlockAudio();
 
-      // SpeechSynthesisのアンロック
+      // SpeechSynthesisアンロック
       window.speechSynthesis.cancel();
       const dummyUtterance = new SpeechSynthesisUtterance(' ');
       dummyUtterance.volume = 0;
       window.speechSynthesis.speak(dummyUtterance);
 
       startBtn.disabled = true;
-      statusEl.textContent = "10秒カウントダウン中...";
+      statusEl.className = "";
+      statusEl.textContent = "10秒カウントダウン...";
+      subStatusEl.textContent = "";
 
-      // 1. スタート後 10秒待機
+      // 1. 10秒待機
       await delay(10000);
 
       // 2. "Competitors ready"
       statusEl.textContent = "Competitors ready";
       await speak("Competitors ready");
 
-      await delay(800);
+      // 3. ランダム時間（0.6秒 〜 1.0秒）の経過
+      const readyToHeadsDelay = getRandomTime(0.6, 1.0);
+      await delay(readyToHeadsDelay);
 
-      // 3. "Heads down"
+      // 4. "Heads down"
       statusEl.textContent = "Heads down";
       await speak("Heads down");
 
-      // 4. ランダム時間（1.0秒 〜 2.5秒）
+      // 5. ランダム時間（1.0秒 〜 2.5秒）を決定して画面に事前表示
+      const randomDelayMs = getRandomTime(1.0, 2.5);
+      const randomDelaySec = (randomDelayMs / 1000).toFixed(2);
+      
       statusEl.textContent = "WAIT...";
-      const randomDelay = Math.floor(Math.random() * 1500) + 1000;
-      await delay(randomDelay);
+      subStatusEl.textContent = `Random Delay: ${randomDelaySec}s`;
 
-      // 5. ホイッスル
-      statusEl.textContent = "BANG !";
+      // 設定したランダム時間待機
+      await delay(randomDelayMs);
+
+      // 6. ホイッスル & GO !
+      statusEl.className = "go-text";
+      statusEl.textContent = "GO !";
+      subStatusEl.textContent = "";
       playWhistle();
 
       // リセット
-      await delay(1500);
+      await delay(2000);
+      statusEl.className = "";
       statusEl.textContent = "READY";
       startBtn.disabled = false;
     });
