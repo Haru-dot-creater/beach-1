@@ -29,7 +29,10 @@ body {
 
 h1 { font-size: 38px; }
 
-.subtitle { color: #557080; margin-bottom: 40px; }
+.subtitle {
+  color: #557080;
+  margin-bottom: 40px;
+}
 
 #startButton {
   width: 100%;
@@ -67,9 +70,7 @@ h1 { font-size: 38px; }
   cursor: pointer;
 }
 
-#resetButton:disabled {
-  opacity: 0.4;
-}
+#resetButton:disabled { opacity: 0.4; }
 
 .note {
   margin-top: 30px;
@@ -86,9 +87,7 @@ h1 { font-size: 38px; }
 <p class="subtitle">START SIGNAL SYSTEM</p>
 
 <button id="startButton">START</button>
-
 <div id="status">Ready to start</div>
-
 <button id="resetButton" disabled>RESET</button>
 
 <p class="note">Keep the sound on. Wait for the whistle!</p>
@@ -110,6 +109,27 @@ function later(callback, delay) {
   timers.push(timer);
 }
 
+// Initialize audio directly from the START button.
+function unlockAudio() {
+  const AudioClass =
+    window.AudioContext || window.webkitAudioContext;
+
+  if (!audioContext) {
+    audioContext = new AudioClass();
+  }
+
+  // Silent buffer to unlock iPhone audio.
+  const buffer = audioContext.createBuffer(1, 1, 22050);
+  const source = audioContext.createBufferSource();
+
+  source.buffer = buffer;
+  source.connect(audioContext.destination);
+  source.start(0);
+
+  return audioContext.resume();
+}
+
+// Speech function
 function speak(text, callback, id) {
   if (id !== runId) return;
 
@@ -128,7 +148,6 @@ function speak(text, callback, id) {
 
     completed = true;
     clearTimeout(watchdog);
-
     callback();
   }
 
@@ -141,7 +160,6 @@ function speak(text, callback, id) {
     finishSpeech();
   };
 
-  // Prevent the sequence from getting stuck.
   const watchdog = setTimeout(() => {
     if (id !== runId || completed) return;
 
@@ -150,60 +168,63 @@ function speak(text, callback, id) {
   }, 12000);
 
   speechSynthesis.speak(utterance);
-
-  // iPhone Safari sometimes pauses speech unexpectedly.
   speechSynthesis.resume();
 }
 
-function playWhistle() {
-  if (!audioContext) return;
+// New whistle sound
+function playWhistle(id) {
+  if (id !== runId || !audioContext) return;
 
-  const ctx = audioContext;
+  audioContext.resume().then(() => {
+    if (id !== runId) return;
 
-  if (ctx.state === "suspended") {
-    ctx.resume();
-  }
+    const ctx = audioContext;
+    const now = ctx.currentTime;
+    const duration = 1.5;
 
-  const now = ctx.currentTime;
-  const duration = 1.2;
+    const oscillator = ctx.createOscillator();
+    const vibrato = ctx.createOscillator();
 
-  const oscillator = ctx.createOscillator();
-  const gain = ctx.createGain();
-  const vibrato = ctx.createOscillator();
-  const vibratoGain = ctx.createGain();
+    const vibratoGain = ctx.createGain();
+    const mainGain = ctx.createGain();
 
-  oscillator.type = "sine";
-  oscillator.frequency.setValueAtTime(2400, now);
-  oscillator.frequency.exponentialRampToValueAtTime(
-    1800, now + duration
-  );
+    // Whistle tone with harmonics
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(2600, now);
+    oscillator.frequency.exponentialRampToValueAtTime(
+      2100, now + duration
+    );
 
-  vibrato.frequency.value = 25;
-  vibratoGain.gain.value = 65;
+    vibrato.frequency.value = 30;
+    vibratoGain.gain.value = 100;
 
-  vibrato.connect(vibratoGain);
-  vibratoGain.connect(oscillator.frequency);
+    vibrato.connect(vibratoGain);
+    vibratoGain.connect(oscillator.frequency);
 
-  gain.gain.setValueAtTime(0.001, now);
-  gain.gain.linearRampToValueAtTime(0.8, now + 0.04);
-  gain.gain.setValueAtTime(0.8, now + 0.75);
-  gain.gain.exponentialRampToValueAtTime(
-    0.001, now + duration
-  );
+    mainGain.gain.setValueAtTime(0.001, now);
+    mainGain.gain.linearRampToValueAtTime(0.7, now + 0.08);
+    mainGain.gain.setValueAtTime(0.7, now + 1.1);
+    mainGain.gain.exponentialRampToValueAtTime(
+      0.001, now + duration
+    );
 
-  oscillator.connect(gain);
-  gain.connect(ctx.destination);
+    oscillator.connect(mainGain);
+    mainGain.connect(ctx.destination);
 
-  oscillator.start(now);
-  vibrato.start(now);
+    oscillator.start(now);
+    vibrato.start(now);
 
-  oscillator.stop(now + duration);
-  vibrato.stop(now + duration);
+    oscillator.stop(now + duration);
+    vibrato.stop(now + duration);
 
-  oscillator.onended = () => {
-    gain.disconnect();
-    vibratoGain.disconnect();
-  };
+    oscillator.onended = () => {
+      mainGain.disconnect();
+      vibratoGain.disconnect();
+    };
+  }).catch(error => {
+    console.error("Whistle audio error:", error);
+    status.textContent = "Audio error. Please try again.";
+  });
 }
 
 function finish(id) {
@@ -225,25 +246,11 @@ function startSequence() {
   resetButton.disabled = true;
   status.textContent = "Get ready...";
 
-  // Unlock audio immediately after the button press.
-  if (!audioContext) {
-    const AudioContextClass =
-      window.AudioContext || window.webkitAudioContext;
+  unlockAudio();
 
-    audioContext = new AudioContextClass();
-  }
-
-  audioContext.resume();
-
-  // Prime speech synthesis on iPhone.
   speechSynthesis.cancel();
 
-  const silent = new SpeechSynthesisUtterance(" ");
-  silent.volume = 0;
-  silent.lang = "en-US";
-  speechSynthesis.speak(silent);
-
-  // Wait 10 seconds.
+  // Wait 10 seconds
   later(() => {
     if (id !== runId) return;
 
@@ -252,24 +259,31 @@ function startSequence() {
     speak("Competitors ready", () => {
       if (id !== runId) return;
 
-      status.textContent = "HEADS DOWN";
-
-      speak("Heads down", () => {
+      // Fixed 1.5 second interval between commands
+      later(() => {
         if (id !== runId) return;
 
-        status.textContent = "Wait for the whistle...";
+        status.textContent = "HEADS DOWN";
 
-        // Random delay: 1.0 to 2.5 seconds.
-        const delay = 1000 + Math.random() * 1500;
-
-        later(() => {
+        speak("Heads down", () => {
           if (id !== runId) return;
 
-          playWhistle();
-          finish(id);
-        }, delay);
+          status.textContent = "Wait for the whistle...";
 
-      }, id);
+          // Random delay: 1.0 - 2.5 seconds
+          const delay = 1000 + Math.random() * 1500;
+
+          later(() => {
+            if (id !== runId) return;
+
+            playWhistle(id);
+            finish(id);
+
+          }, delay);
+
+        }, id);
+
+      }, 1500);
 
     }, id);
 
@@ -287,7 +301,6 @@ function resetSequence() {
   running = false;
   startButton.disabled = false;
   resetButton.disabled = true;
-
   status.textContent = "Ready to start";
 }
 
