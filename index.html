@@ -5,11 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BEACH FLAGS - START SIGNAL SYSTEM</title>
 
-  <!-- ★ ここから追加したアプリ化（PWA）用設定 ★ -->
+  <!-- PWA設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="BeachFlags">
-  <!-- ★ ここまで ★ -->
 
   <style>
     :root {
@@ -21,7 +20,6 @@
       --btn-shadow: rgba(37, 99, 235, 0.6);
     }
 
-    /* テーマ別カラー定義 */
     [data-theme="green"] {
       --primary-color: #059669;
       --primary-dark: #065f46;
@@ -98,31 +96,34 @@
       background: rgba(255, 255, 255, 0.25);
     }
 
-    /* カラー選択モーダルパネル */
+    /* カラー＆時間選択モーダルパネル */
     .color-panel {
       position: absolute;
       top: 65px;
       right: 15px;
       background: #1e293b;
       border: 1px solid #334155;
-      padding: 15px;
+      padding: 16px;
       border-radius: 12px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
       display: none;
       flex-direction: column;
-      gap: 10px;
+      gap: 14px;
       z-index: 20;
+      width: 260px;
+      text-align: left;
     }
 
     .color-panel.active {
       display: flex;
     }
 
-    .color-panel-title {
-      font-size: 0.85rem;
+    .panel-section-title {
+      font-size: 0.8rem;
       color: #94a3b8;
       font-weight: bold;
-      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
     }
 
     .color-options {
@@ -131,8 +132,8 @@
     }
 
     .color-dot {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       border: 2px solid transparent;
       cursor: pointer;
@@ -148,12 +149,38 @@
       transform: scale(1.1);
     }
 
-    /* 各カラー定義 */
     .dot-blue { background: #2563eb; }
     .dot-green { background: #059669; }
     .dot-red { background: #dc2626; }
     .dot-purple { background: #7c3aed; }
     .dot-orange { background: #ea580c; }
+
+    /* カウントダウン時間ボタン群 */
+    .time-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .time-btn {
+      background: #334155;
+      border: 1px solid #475569;
+      color: #f1f5f9;
+      padding: 6px 0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .time-btn.selected {
+      background: var(--primary-color);
+      border-color: var(--primary-light);
+      color: #ffffff;
+      box-shadow: 0 0 8px var(--primary-glow);
+    }
 
     /* ヘッダーエリア */
     .header {
@@ -261,15 +288,29 @@
   <!-- 設定トグルボタン -->
   <button id="settingsBtn" class="settings-toggle-btn" aria-label="設定">⚙</button>
 
-  <!-- カラー選択パネル -->
+  <!-- カラー & カウントダウン時間 選択パネル -->
   <div id="colorPanel" class="color-panel">
-    <div class="color-panel-title">THEME COLOR</div>
-    <div class="color-options">
-      <div class="color-dot dot-blue selected" data-color="blue"></div>
-      <div class="color-dot dot-green" data-color="green"></div>
-      <div class="color-dot dot-red" data-color="red"></div>
-      <div class="color-dot dot-purple" data-color="purple"></div>
-      <div class="color-dot dot-orange" data-color="orange"></div>
+    <div>
+      <div class="panel-section-title">THEME COLOR</div>
+      <div class="color-options">
+        <div class="color-dot dot-blue selected" data-color="blue"></div>
+        <div class="color-dot dot-green" data-color="green"></div>
+        <div class="color-dot dot-red" data-color="red"></div>
+        <div class="color-dot dot-purple" data-color="purple"></div>
+        <div class="color-dot dot-orange" data-color="orange"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">PRE-START TIMER</div>
+      <div class="time-options">
+        <button class="time-btn" data-time="10">10s</button>
+        <button class="time-btn" data-time="20">20s</button>
+        <button class="time-btn" data-time="30">30s</button>
+        <button class="time-btn" data-time="40">40s</button>
+        <button class="time-btn" data-time="50">50s</button>
+        <button class="time-btn" data-time="60">60s</button>
+      </div>
     </div>
   </div>
 
@@ -297,45 +338,60 @@
     const settingsBtn = document.getElementById('settingsBtn');
     const colorPanel = document.getElementById('colorPanel');
     const colorDots = document.querySelectorAll('.color-dot');
+    const timeBtns = document.querySelectorAll('.time-btn');
 
     let audioCtx = null;
+    let selectedTimerSeconds = 10; // デフォルト10秒
 
-    // --- カラーテーマ切替機能 ---
+    // --- 設定＆テーマ処理 ---
     function setTheme(colorName) {
       if (colorName === 'blue') {
         document.documentElement.removeAttribute('data-theme');
       } else {
         document.documentElement.setAttribute('data-theme', colorName);
       }
-      
       colorDots.forEach(dot => {
         dot.classList.toggle('selected', dot.dataset.color === colorName);
       });
-
       localStorage.setItem('beach_flags_theme', colorName);
     }
 
-    // 保存したテーマの読み込み
-    const savedTheme = localStorage.getItem('beach_flags_theme') || 'blue';
-    setTheme(savedTheme);
+    function setTimerSetting(sec) {
+      selectedTimerSeconds = parseInt(sec, 10);
+      timeBtns.forEach(btn => {
+        btn.classList.toggle('selected', parseInt(btn.dataset.time, 10) === selectedTimerSeconds);
+      });
+      localStorage.setItem('beach_flags_timer', selectedTimerSeconds);
+    }
 
-    // 設定メニュー開閉
+    // 保存設定の読み込み
+    const savedTheme = localStorage.getItem('beach_flags_theme') || 'blue';
+    const savedTimer = localStorage.getItem('beach_flags_timer') || '10';
+    setTheme(savedTheme);
+    setTimerSetting(savedTimer);
+
+    // イベントリスナー
     settingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       colorPanel.classList.toggle('active');
     });
 
-    // ドットクリックで色変更
     colorDots.forEach(dot => {
       dot.addEventListener('click', () => {
         setTheme(dot.dataset.color);
-        colorPanel.classList.remove('active');
       });
     });
 
-    // 画面外タップでパネルを閉じる
-    document.addEventListener('click', () => {
-      colorPanel.classList.remove('active');
+    timeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        setTimerSetting(btn.dataset.time);
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!colorPanel.contains(e.target) && e.target !== settingsBtn) {
+        colorPanel.classList.remove('active');
+      }
     });
 
     // --- オーディオ制御系 ---
@@ -355,11 +411,43 @@
       source.start(0);
     }
 
+    // 10秒前の予告音（ピッ・ピッ・ピー）
+    function playWarningBeeps() {
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const now = audioCtx.currentTime;
+
+      // 短いピッ (1回目)
+      createBeep(1800, now, 0.12);
+      // 短いピッ (2回目)
+      createBeep(1800, now + 0.35, 0.12);
+      // 長めのピー (3回目)
+      createBeep(2200, now + 0.7, 0.45);
+    }
+
+    // 1回分のビープ音生成
+    function createBeep(freq, startTime, duration) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0.4, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
+
+    // スタートホイッスル
     function playWhistle() {
       if (!audioCtx) return;
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
 
       const now = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
@@ -411,7 +499,7 @@
       return Math.floor((Math.random() * (maxSec - minSec) + minSec) * 1000);
     }
 
-    // --- メイン処理 ---
+    // --- メインカウントダウンシーケンス ---
     startBtn.addEventListener('click', async () => {
       unlockAudio();
 
@@ -422,11 +510,21 @@
 
       startBtn.disabled = true;
       statusEl.className = "";
-      statusEl.textContent = "10秒カウントダウン...";
-      subStatusEl.textContent = "";
+      
+      let currentSeconds = selectedTimerSeconds;
+      statusEl.textContent = `カウントダウン (${currentSeconds}s)`;
 
-      // 1. 10秒待機
-      await delay(10000);
+      // カウントダウン処理（1秒ごとのループ）
+      for (let i = currentSeconds; i > 0; i--) {
+        statusEl.textContent = `カウントダウン (${i}s)`;
+
+        // 20秒以上の設定時、残り10秒のタイミングで「ピッ・ピッ・ピー」を鳴らす
+        if (selectedTimerSeconds >= 20 && i === 10) {
+          playWarningBeeps();
+        }
+
+        await delay(1000);
+      }
 
       // 2. "Competitors ready"
       statusEl.textContent = "Competitors ready";
