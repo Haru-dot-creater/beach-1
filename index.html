@@ -324,4 +324,178 @@
       } else {
         document.documentElement.setAttribute('data-theme', colorName);
       }
-      colorDots.forEach(dot =>
+      colorDots.forEach(dot => {
+        dot.classList.toggle('selected', dot.dataset.color === colorName);
+      });
+      localStorage.setItem('beach_flags_theme', colorName);
+    }
+
+    function setTimerSetting(sec) {
+      selectedTimerSeconds = parseInt(sec, 10);
+      timeBtns.forEach(btn => {
+        btn.classList.toggle('selected', parseInt(btn.dataset.time, 10) === selectedTimerSeconds);
+      });
+      localStorage.setItem('beach_flags_timer', selectedTimerSeconds);
+    }
+
+    const savedTheme = localStorage.getItem('beach_flags_theme') || 'blue';
+    const savedTimer = localStorage.getItem('beach_flags_timer') || '10';
+    setTheme(savedTheme);
+    setTimerSetting(savedTimer);
+
+    settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      colorPanel.classList.toggle('active');
+    });
+
+    colorDots.forEach(dot => {
+      dot.addEventListener('click', () => setTheme(dot.dataset.color));
+    });
+
+    timeBtns.forEach(btn => {
+      btn.addEventListener('click', () => setTimerSetting(btn.dataset.time));
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!colorPanel.contains(e.target) && e.target !== settingsBtn) {
+        colorPanel.classList.remove('active');
+      }
+    });
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // 音声読み上げ（プログラムが止まらないようタイマー処理で安全ガード）
+    function speak(text) {
+      return new Promise((resolve) => {
+        if (!('speechSynthesis' in window)) {
+          setTimeout(resolve, 1200);
+          return;
+        }
+
+        try {
+          window.speechSynthesis.cancel();
+          const uttr = new SpeechSynthesisUtterance(text);
+          uttr.lang = 'en-US';
+          uttr.rate = 0.95;
+
+          let isDone = false;
+          const finish = () => {
+            if (!isDone) {
+              isDone = true;
+              resolve();
+            }
+          };
+
+          uttr.onend = finish;
+          uttr.onerror = finish;
+          setTimeout(finish, 1500); // 1.5秒で確実に次へ進める
+
+          window.speechSynthesis.speak(uttr);
+        } catch (e) {
+          setTimeout(resolve, 1200);
+        }
+      });
+    }
+
+    function playWarningBeeps() {
+      if (!audioCtx) return;
+      initAudio();
+      const now = audioCtx.currentTime;
+      createBeep(1800, now, 0.12);
+      createBeep(1800, now + 0.35, 0.12);
+      createBeep(2200, now + 0.7, 0.45);
+    }
+
+    function createBeep(freq, startTime, duration) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(0.4, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
+
+    function playWhistle() {
+      if (!audioCtx) return;
+      initAudio();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(2600, now);
+      gain.gain.setValueAtTime(0.7, now);
+      gain.gain.setValueAtTime(0.7, now + 0.6);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.85);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.85);
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function getRandomTime(minSec, maxSec) {
+      return Math.floor((Math.random() * (maxSec - minSec) + minSec) * 1000);
+    }
+
+    startBtn.addEventListener('click', async () => {
+      initAudio();
+      startBtn.disabled = true;
+      statusEl.className = "";
+      
+      let currentSeconds = selectedTimerSeconds;
+
+      for (let i = currentSeconds; i > 0; i--) {
+        statusEl.textContent = `カウントダウン (${i}s)`;
+        if (selectedTimerSeconds >= 20 && i === 10) {
+          playWarningBeeps();
+        }
+        await delay(1000);
+      }
+
+      statusEl.textContent = "Competitors ready";
+      await speak("Competitors ready");
+
+      const readyToHeadsDelay = getRandomTime(0.6, 1.0);
+      await delay(readyToHeadsDelay);
+
+      statusEl.textContent = "Heads down";
+      await speak("Heads down");
+
+      const randomDelayMs = getRandomTime(1.0, 2.5);
+      const randomDelaySec = (randomDelayMs / 1000).toFixed(2);
+      
+      statusEl.textContent = "WAIT...";
+      subStatusEl.textContent = `Random Delay: ${randomDelaySec}s`;
+
+      await delay(randomDelayMs);
+
+      statusEl.className = "go-text";
+      statusEl.textContent = "GO !";
+      subStatusEl.textContent = "";
+      playWhistle();
+
+      await delay(2000);
+      statusEl.className = "";
+      statusEl.textContent = "READY";
+      startBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
