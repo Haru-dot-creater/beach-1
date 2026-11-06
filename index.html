@@ -317,6 +317,7 @@
 
     let audioCtx = null;
     let selectedTimerSeconds = 10;
+    const audioBuffers = {};
 
     function setTheme(colorName) {
       if (colorName === 'blue') {
@@ -362,7 +363,7 @@
       }
     });
 
-    // オーディオコンテキストの初期化
+    // Web Audio APIの初期化
     function unlockAudio() {
       if (!audioCtx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -373,131 +374,47 @@
       }
     }
 
-    // Web Audio API経由で確実に同じスピーカーへ声を送る音声読み上げ
-    function speakWebAudio(text) {
+    // オンライン音声ファイル（TTS）の読み込み＆デコード
+    async function loadSpeechAudio(text, key) {
+      if (audioBuffers[key]) return audioBuffers[key];
+      try {
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${encodeURIComponent(text)}`;
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        audioBuffers[key] = audioBuffer;
+        return audioBuffer;
+      } catch (e) {
+        console.error("Audio load error:", e);
+        return null;
+      }
+    }
+
+    // Web Audio APIの出力先から直接音声を再生する
+    function playBuffer(buffer) {
       return new Promise((resolve) => {
-        if (!('speechSynthesis' in window)) {
-          setTimeout(resolve, 1500);
+        if (!buffer || !audioCtx) {
+          setTimeout(resolve, 1200);
           return;
         }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
 
-        window.speechSynthesis.cancel();
-        const uttr = new SpeechSynthesisUtterance(text);
-        uttr.lang = 'en-US';
-        uttr.rate = 0.95;
-
-        let hasResolved = false;
-        const done = () => {
-          if (!hasResolved) {
-            hasResolved = true;
-            resolve();
-          }
-        };
-
-        uttr.onend = done;
-        uttr.onerror = done;
-        setTimeout(done, 2500);
-
-        // ダミーのサイレントノードを通してAudioContext側へ出力ルートを同期させる
-        if (audioCtx && audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-
-        window.speechSynthesis.speak(uttr);
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioCtx.destination);
+        source.onended = resolve;
+        source.start(0);
       });
+    }
+
+    async function speak(text, key) {
+      unlockAudio();
+      const buffer = await loadSpeechAudio(text, key);
+      await playBuffer(buffer);
     }
 
     function playWarningBeeps() {
       if (!audioCtx) return;
       if (audioCtx.state === 'suspended') audioCtx.resume();
       const now = audioCtx.currentTime;
-      createBeep(1800, now, 0.12);
-      createBeep(1800, now + 0.35, 0.12);
-      createBeep(2200, now + 0.7, 0.45);
-    }
-
-    function createBeep(freq, startTime, duration) {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, startTime);
-      gain.gain.setValueAtTime(0.4, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    }
-
-    function playWhistle() {
-      if (!audioCtx) return;
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2600, now);
-      gain.gain.setValueAtTime(0.7, now);
-      gain.gain.setValueAtTime(0.7, now + 0.6);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.85);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.85);
-    }
-
-    function delay(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    function getRandomTime(minSec, maxSec) {
-      return Math.floor((Math.random() * (maxSec - minSec) + minSec) * 1000);
-    }
-
-    startBtn.addEventListener('click', async () => {
-      unlockAudio();
-      startBtn.disabled = true;
-      statusEl.className = "";
-      
-      let currentSeconds = selectedTimerSeconds;
-
-      for (let i = currentSeconds; i > 0; i--) {
-        statusEl.textContent = `カウントダウン (${i}s)`;
-        if (selectedTimerSeconds >= 20 && i === 10) {
-          playWarningBeeps();
-        }
-        await delay(1000);
-      }
-
-      statusEl.textContent = "Competitors ready";
-      await speakWebAudio("Competitors ready");
-
-      const readyToHeadsDelay = getRandomTime(0.6, 1.0);
-      await delay(readyToHeadsDelay);
-
-      statusEl.textContent = "Heads down";
-      await speakWebAudio("Heads down");
-
-      const randomDelayMs = getRandomTime(1.0, 2.5);
-      const randomDelaySec = (randomDelayMs / 1000).toFixed(2);
-      
-      statusEl.textContent = "WAIT...";
-      subStatusEl.textContent = `Random Delay: ${randomDelaySec}s`;
-
-      await delay(randomDelayMs);
-
-      statusEl.className = "go-text";
-      statusEl.textContent = "GO !";
-      subStatusEl.textContent = "";
-      playWhistle();
-
-      await delay(2000);
-      statusEl.className = "";
-      statusEl.textContent = "READY";
-      startBtn.disabled = false;
-    });
-  </script>
-</body>
-</html>
+      createBeep(1800, now, 0.1
