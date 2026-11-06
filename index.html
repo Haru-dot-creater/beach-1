@@ -317,7 +317,6 @@
 
     let audioCtx = null;
     let selectedTimerSeconds = 10;
-    const audioBuffers = {};
 
     function setTheme(colorName) {
       if (colorName === 'blue') {
@@ -325,96 +324,4 @@
       } else {
         document.documentElement.setAttribute('data-theme', colorName);
       }
-      colorDots.forEach(dot => {
-        dot.classList.toggle('selected', dot.dataset.color === colorName);
-      });
-      localStorage.setItem('beach_flags_theme', colorName);
-    }
-
-    function setTimerSetting(sec) {
-      selectedTimerSeconds = parseInt(sec, 10);
-      timeBtns.forEach(btn => {
-        btn.classList.toggle('selected', parseInt(btn.dataset.time, 10) === selectedTimerSeconds);
-      });
-      localStorage.setItem('beach_flags_timer', selectedTimerSeconds);
-    }
-
-    const savedTheme = localStorage.getItem('beach_flags_theme') || 'blue';
-    const savedTimer = localStorage.getItem('beach_flags_timer') || '10';
-    setTheme(savedTheme);
-    setTimerSetting(savedTimer);
-
-    settingsBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      colorPanel.classList.toggle('active');
-    });
-
-    colorDots.forEach(dot => {
-      dot.addEventListener('click', () => setTheme(dot.dataset.color));
-    });
-
-    timeBtns.forEach(btn => {
-      btn.addEventListener('click', () => setTimerSetting(btn.dataset.time));
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!colorPanel.contains(e.target) && e.target !== settingsBtn) {
-        colorPanel.classList.remove('active');
-      }
-    });
-
-    // Web Audio APIの初期化
-    function unlockAudio() {
-      if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContext();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }
-
-    // オンライン音声ファイル（TTS）の読み込み＆デコード
-    async function loadSpeechAudio(text, key) {
-      if (audioBuffers[key]) return audioBuffers[key];
-      try {
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${encodeURIComponent(text)}`;
-        const response = await fetch(url);
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        audioBuffers[key] = audioBuffer;
-        return audioBuffer;
-      } catch (e) {
-        console.error("Audio load error:", e);
-        return null;
-      }
-    }
-
-    // Web Audio APIの出力先から直接音声を再生する
-    function playBuffer(buffer) {
-      return new Promise((resolve) => {
-        if (!buffer || !audioCtx) {
-          setTimeout(resolve, 1200);
-          return;
-        }
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-
-        const source = audioCtx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(audioCtx.destination);
-        source.onended = resolve;
-        source.start(0);
-      });
-    }
-
-    async function speak(text, key) {
-      unlockAudio();
-      const buffer = await loadSpeechAudio(text, key);
-      await playBuffer(buffer);
-    }
-
-    function playWarningBeeps() {
-      if (!audioCtx) return;
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      const now = audioCtx.currentTime;
-      createBeep(1800, now, 0.1
+      colorDots.forEach(dot =>
