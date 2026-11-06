@@ -16,7 +16,6 @@
 
   <style>
     :root {
-      /* デフォルトカラー（ブルー） */
       --primary-color: #2563eb;
       --primary-dark: #1e40af;
       --primary-light: #38bdf8;
@@ -56,9 +55,7 @@
       --btn-shadow: rgba(234, 88, 12, 0.6);
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -76,7 +73,6 @@
       position: relative;
     }
 
-    /* 設定ボタン（右上） */
     .settings-toggle-btn {
       position: absolute;
       top: 15px;
@@ -96,11 +92,8 @@
       z-index: 10;
     }
 
-    .settings-toggle-btn:active {
-      background: rgba(255, 255, 255, 0.25);
-    }
+    .settings-toggle-btn:active { background: rgba(255, 255, 255, 0.25); }
 
-    /* カラー＆時間選択モーダルパネル */
     .color-panel {
       position: absolute;
       top: 65px;
@@ -118,9 +111,7 @@
       text-align: left;
     }
 
-    .color-panel.active {
-      display: flex;
-    }
+    .color-panel.active { display: flex; }
 
     .panel-section-title {
       font-size: 0.8rem;
@@ -130,10 +121,7 @@
       margin-bottom: 6px;
     }
 
-    .color-options {
-      display: flex;
-      gap: 10px;
-    }
+    .color-options { display: flex; gap: 10px; }
 
     .color-dot {
       width: 30px;
@@ -144,14 +132,8 @@
       transition: transform 0.15s, border-color 0.15s;
     }
 
-    .color-dot:active {
-      transform: scale(0.9);
-    }
-
-    .color-dot.selected {
-      border-color: #ffffff;
-      transform: scale(1.1);
-    }
+    .color-dot:active { transform: scale(0.9); }
+    .color-dot.selected { border-color: #ffffff; transform: scale(1.1); }
 
     .dot-blue { background: #2563eb; }
     .dot-green { background: #059669; }
@@ -159,7 +141,6 @@
     .dot-purple { background: #7c3aed; }
     .dot-orange { background: #ea580c; }
 
-    /* カウントダウン時間ボタン群 */
     .time-options {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -186,10 +167,7 @@
       box-shadow: 0 0 8px var(--primary-glow);
     }
 
-    /* ヘッダーエリア */
-    .header {
-      margin-top: 35px;
-    }
+    .header { margin-top: 35px; }
 
     .header h1 {
       margin: 0;
@@ -209,7 +187,6 @@
       color: #94a3b8;
     }
 
-    /* メインボタンエリア */
     .main-container {
       display: flex;
       justify-content: center;
@@ -254,7 +231,6 @@
       transform: none;
     }
 
-    /* ステータス表示エリア */
     .footer-status {
       margin-bottom: 30px;
       height: 90px;
@@ -289,10 +265,8 @@
 </head>
 <body>
 
-  <!-- 設定トグルボタン -->
   <button id="settingsBtn" class="settings-toggle-btn" aria-label="設定">⚙</button>
 
-  <!-- カラー & カウントダウン時間 選択パネル -->
   <div id="colorPanel" class="color-panel">
     <div>
       <div class="panel-section-title">THEME COLOR</div>
@@ -318,18 +292,15 @@
     </div>
   </div>
 
-  <!-- ヘッダー -->
   <div class="header">
     <h1>BEACH FLAGS</h1>
     <p>START SIGNAL SYSTEM</p>
   </div>
 
-  <!-- スタートボタン -->
   <div class="main-container">
     <button id="startBtn" class="start-btn">START</button>
   </div>
 
-  <!-- ステータス表示 -->
   <div class="footer-status">
     <div id="status">READY</div>
     <div id="subStatus"></div>
@@ -345,9 +316,8 @@
     const timeBtns = document.querySelectorAll('.time-btn');
 
     let audioCtx = null;
-    let selectedTimerSeconds = 10; // デフォルト10秒
+    let selectedTimerSeconds = 10;
 
-    // --- 設定＆テーマ処理 ---
     function setTheme(colorName) {
       if (colorName === 'blue') {
         document.documentElement.removeAttribute('data-theme');
@@ -368,28 +338,22 @@
       localStorage.setItem('beach_flags_timer', selectedTimerSeconds);
     }
 
-    // 保存設定の読み込み
     const savedTheme = localStorage.getItem('beach_flags_theme') || 'blue';
     const savedTimer = localStorage.getItem('beach_flags_timer') || '10';
     setTheme(savedTheme);
     setTimerSetting(savedTimer);
 
-    // イベントリスナー
     settingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       colorPanel.classList.toggle('active');
     });
 
     colorDots.forEach(dot => {
-      dot.addEventListener('click', () => {
-        setTheme(dot.dataset.color);
-      });
+      dot.addEventListener('click', () => setTheme(dot.dataset.color));
     });
 
     timeBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        setTimerSetting(btn.dataset.time);
-      });
+      btn.addEventListener('click', () => setTimerSetting(btn.dataset.time));
     });
 
     document.addEventListener('click', (e) => {
@@ -398,7 +362,7 @@
       }
     });
 
-    // --- オーディオ制御系 ---
+    // オーディオコンテキストの初期化
     function unlockAudio() {
       if (!audioCtx) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -407,92 +371,81 @@
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
-
-      const buffer = audioCtx.createBuffer(1, 1, 22050);
-      const source = audioCtx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioCtx.destination);
-      source.start(0);
     }
 
-    // 10秒前の予告音（ピッ・ピッ・ピー）
-    function playWarningBeeps() {
-      if (!audioCtx) return;
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-
-      const now = audioCtx.currentTime;
-
-      // 短いピッ (1回目)
-      createBeep(1800, now, 0.12);
-      // 短いピッ (2回目)
-      createBeep(1800, now + 0.35, 0.12);
-      // 長めのピー (3回目)
-      createBeep(2200, now + 0.7, 0.45);
-    }
-
-    // 1回分のビープ音生成
-    function createBeep(freq, startTime, duration) {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, startTime);
-
-      gain.gain.setValueAtTime(0.4, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    }
-
-    // スタートホイッスル
-    function playWhistle() {
-      if (!audioCtx) return;
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2600, now);
-
-      gain.gain.setValueAtTime(0.6, now);
-      gain.gain.setValueAtTime(0.6, now + 0.6);
-      gain.gain.linearRampToValueAtTime(0.001, now + 0.85);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.85);
-    }
-
-    function speak(text) {
+    // Web Audio API経由で確実に同じスピーカーへ声を送る音声読み上げ
+    function speakWebAudio(text) {
       return new Promise((resolve) => {
-        window.speechSynthesis.cancel();
+        if (!('speechSynthesis' in window)) {
+          setTimeout(resolve, 1500);
+          return;
+        }
 
+        window.speechSynthesis.cancel();
         const uttr = new SpeechSynthesisUtterance(text);
         uttr.lang = 'en-US';
-        uttr.rate = 1.0;
+        uttr.rate = 0.95;
 
-        let resolved = false;
+        let hasResolved = false;
         const done = () => {
-          if (!resolved) {
-            resolved = true;
+          if (!hasResolved) {
+            hasResolved = true;
             resolve();
           }
         };
 
         uttr.onend = done;
         uttr.onerror = done;
-        setTimeout(done, 3000);
+        setTimeout(done, 2500);
+
+        // ダミーのサイレントノードを通してAudioContext側へ出力ルートを同期させる
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
 
         window.speechSynthesis.speak(uttr);
       });
+    }
+
+    function playWarningBeeps() {
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+      createBeep(1800, now, 0.12);
+      createBeep(1800, now + 0.35, 0.12);
+      createBeep(2200, now + 0.7, 0.45);
+    }
+
+    function createBeep(freq, startTime, duration) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(0.4, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
+
+    function playWhistle() {
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(2600, now);
+      gain.gain.setValueAtTime(0.7, now);
+      gain.gain.setValueAtTime(0.7, now + 0.6);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.85);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.85);
     }
 
     function delay(ms) {
@@ -503,46 +456,30 @@
       return Math.floor((Math.random() * (maxSec - minSec) + minSec) * 1000);
     }
 
-    // --- メインカウントダウンシーケンス ---
     startBtn.addEventListener('click', async () => {
       unlockAudio();
-
-      window.speechSynthesis.cancel();
-      const dummyUtterance = new SpeechSynthesisUtterance(' ');
-      dummyUtterance.volume = 0;
-      window.speechSynthesis.speak(dummyUtterance);
-
       startBtn.disabled = true;
       statusEl.className = "";
       
       let currentSeconds = selectedTimerSeconds;
-      statusEl.textContent = `カウントダウン (${currentSeconds}s)`;
 
-      // カウントダウン処理（1秒ごとのループ）
       for (let i = currentSeconds; i > 0; i--) {
         statusEl.textContent = `カウントダウン (${i}s)`;
-
-        // 20秒以上の設定時、残り10秒のタイミングで「ピッ・ピッ・ピー」を鳴らす
         if (selectedTimerSeconds >= 20 && i === 10) {
           playWarningBeeps();
         }
-
         await delay(1000);
       }
 
-      // 2. "Competitors ready"
       statusEl.textContent = "Competitors ready";
-      await speak("Competitors ready");
+      await speakWebAudio("Competitors ready");
 
-      // 3. ランダム時間（0.6秒 〜 1.0秒）
       const readyToHeadsDelay = getRandomTime(0.6, 1.0);
       await delay(readyToHeadsDelay);
 
-      // 4. "Heads down"
       statusEl.textContent = "Heads down";
-      await speak("Heads down");
+      await speakWebAudio("Heads down");
 
-      // 5. ランダム時間（1.0秒 〜 2.5秒）を事前表示
       const randomDelayMs = getRandomTime(1.0, 2.5);
       const randomDelaySec = (randomDelayMs / 1000).toFixed(2);
       
@@ -551,13 +488,11 @@
 
       await delay(randomDelayMs);
 
-      // 6. ホイッスル & GO !
       statusEl.className = "go-text";
       statusEl.textContent = "GO !";
       subStatusEl.textContent = "";
       playWhistle();
 
-      // リセット
       await delay(2000);
       statusEl.className = "";
       statusEl.textContent = "READY";
